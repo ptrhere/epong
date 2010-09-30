@@ -22,23 +22,29 @@
 #include "StelModule.hpp"
 #include <QFont>
 #include "VecMath.hpp"
+//#include "osc/OscOutboundPacketStream.h"
 
+class UdpTransmitSocket;
 //! This is an example of a plug-in which can be dynamically loaded into stellarium
-class EPongStelModule : public StelModule
+class EPongStelModule:public StelModule
 {
 public:
-	EPongStelModule();
-	virtual ~EPongStelModule();
+  EPongStelModule ();
+  virtual ~ EPongStelModule ();
 
-	///////////////////////////////////////////////////////////////////////////
-	// Methods defined in the StelModule class
-	virtual void init();
-	virtual void update(double) {;}
-	virtual void draw(StelCore* core);
-	virtual double getCallOrder(StelModuleActionName actionName) const;
+  ///////////////////////////////////////////////////////////////////////////
+  // Methods defined in the StelModule class
+  virtual void init ();
+  void reinit ();
+  virtual void update (double)
+  {;
+  }
+  virtual void draw (StelCore * core);
+  virtual double getCallOrder (StelModuleActionName actionName) const;
 private:
-	// Font used for displaying our text
-	QFont font;
+  // Font used for displaying our text
+  QFont font;
+
 };
 
 #include "fixx11h.h"
@@ -46,32 +52,13 @@ private:
 #include "StelPluginInterface.hpp"
 
 //! This class is used by Qt to manage a plug-in interface
-class EPongStelModuleStelPluginInterface : public QObject, public StelPluginInterface
+class EPongStelModuleStelPluginInterface:public QObject,
+  public StelPluginInterface
 {
-	Q_OBJECT
-	Q_INTERFACES(StelPluginInterface)
-public:
-	virtual StelModule* getStelModule() const;
-	virtual StelPluginInfo getPluginInfo() const;
+Q_OBJECT Q_INTERFACES (StelPluginInterface) public:
+  virtual StelModule * getStelModule () const;
+  virtual StelPluginInfo getPluginInfo () const;
 };
 
-class PongBall 
-{
-public:
-	void move(double alpha);
-	void create();
-	Vec3f pos;
-	Vec3f normal;
-	char event;
-	//double event_time;
-	bool alive;
-	double moved;
-};
 
-class PongEvent
-{
-public:
-	float time;
-	char type;
-};
-#endif /*EPONGSTELMODULE_HPP_*/
+#endif /*EPONGSTELMODULE_HPP_ */

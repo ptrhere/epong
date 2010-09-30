@@ -1,10 +1,34 @@
-INCLUDE_DIRECTORIES(.)
+INCLUDE_DIRECTORIES(. osc ip)
 
 LINK_DIRECTORIES(${BUILD_DIR}/src)
 
 SET(EPongStelModule_SRCS
   EPongStelModule.hpp
-  EPongStelModule.cpp)
+  Pong.hpp
+  EPongStelModule.cpp
+ip/UdpSocket.h
+ip/posix
+ip/posix/NetworkingUtils.cpp
+ip/posix/UdpSocket.cpp
+ip/IpEndpointName.h
+ip/NetworkingUtils.h
+ip/TimerListener.h
+ip/PacketListener.h
+ip/IpEndpointName.cpp
+osc/OscPacketListener.h
+osc/OscOutboundPacketStream.h
+osc/OscPrintReceivedElements.h
+osc/OscTypes.cpp
+osc/MessageMappingOscPacketListener.h
+osc/OscOutboundPacketStream.cpp
+osc/OscTypes.h
+osc/OscPrintReceivedElements.cpp
+osc/OscException.h
+osc/OscReceivedElements.h
+osc/OscReceivedElements.cpp
+osc/OscHostEndianness.h
+
+)
 
 # Add here all the files which require moc compilation
 # that is, all the headers with SIGNAL/SLOTS/PLUGIN_INTERFACE etc..
