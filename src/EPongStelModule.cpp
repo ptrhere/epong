@@ -76,13 +76,15 @@ perror_exit (char *error)
 
 PongBall *ball[BALLS];
 PongPaddle *paddle[PADDLES];
-float paddle_color[][] = {
+
+float paddle_color[PADDLES][4] = {
 {1.0f,0.0f,0.0f,1.0f},
 {0.0f,1.0f,0.0f,1.0f},
-{0.0f,0.0f,1.0f,1.0f},
-{0.0f,1.0f,1.0f,1.0f},
+{0.0f,0.5f,1.0f,1.0f},
+{1.0f,1.0f,0.0f,1.0f},
+};
 
-}
+float paddle_alpha[PADDLES]= { 0.0f, PI/2.0f, PI, 3.0f * PI / 2.0f};
 
 PongEvent *pevent[BALLS];
 int ball_countdown;
@@ -261,7 +263,7 @@ EPongStelModule::init ()
       paddle[i] = new PongPaddle ();
       paddle[i]->pos.set (0.0f, 1.0f, 0.0f);
       paddle[i]->normal.set (0.0f, 0.0f, 1.0f);
-      paddle[i]->total_alpha = 0.0f;
+      paddle[i]->total_alpha = paddle_alpha[i];
       paddle[i]->size= 0.05f; // alpha
     }
   for (i = 0; i < BALLS; i++)
@@ -291,6 +293,9 @@ start_game ()
 {
   if (!in_game)
     {
+      for(int i=0;i<PADDLES; i++){
+	paddle[i]->total_alpha = paddle_alpha[i];
+	}
       ball_countdown = BALLS;
       for (int i = 0; i < BALLS; i++)
 	{
@@ -556,11 +561,11 @@ EPongStelModule::draw (StelCore * core)
       painter.setColor (0.0f, 0.6f, 1.f);
       if (prj->project (countpos, xy))
 	painter.drawText (xy[0], xy[1], s, 0, -shiftx, shifty);
-      painter.setColor (1.0f, 1.f, 1.f);
 
       int i;
       for (i = 0; i < PADDLES; i++)
 	{
+          painter.setColor (paddle_color[i][0], paddle_color[i][1],paddle_color[i][2]);
 
 	  Vec3f pos = paddle[i]->pos;
 
@@ -600,6 +605,7 @@ EPongStelModule::draw (StelCore * core)
 	  paddle[i]->pos.normalize ();
 	  //   paddle[i]->normal.normalize ();
 	}
+      painter.setColor (1.0f, 1.f, 1.f);
       for (i = 0; i < BALLS; i++)
 	{
 	  if (ball[i]->alive)
@@ -635,7 +641,7 @@ EPongStelModule::draw (StelCore * core)
 		  QString text = "";
 		  text.setNum (pevent[i]->time - currentTime);
 
-		  //painter.drawText (xy[0], xy[1],text);       //qDebug() << "end of drawing epong";
+		  painter.drawText (xy[0], xy[1],text);       //qDebug() << "end of drawing epong";
 
 		}
 	      ball[i]->pos.normalize ();
