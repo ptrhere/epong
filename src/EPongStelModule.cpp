@@ -74,6 +74,22 @@ perror_exit (char *error)
   handler (9);
 }
 
+
+double arccos(double x)
+{
+        if (x > 1.0) {
+		printf("arccos returned 0\n");
+		return 0.0;
+		}
+        if (x < -1.0) 
+         {
+		printf("arccos returned pi\n");
+		return PI; 
+		}
+        return acos(x);
+}
+
+
 PongBall *ball[BALLS];
 PongPaddle *paddle[PADDLES];
 
@@ -100,6 +116,8 @@ enum
 bool in_game;
 float gamestarttime = 0.0;
 
+QFont *pongFont;
+
 // Time in seconds a ball needs to make a halfturn
 UdpTransmitSocket *transmitSocket = 0;
 
@@ -113,7 +131,6 @@ const char *re_dev[] = {
   "/dev/input/event8",
 };
 
-QFont *pongFont;
 
 class ReadEventThread:public QThread
 {
@@ -295,15 +312,18 @@ start_game ()
     {
       for(int i=0;i<PADDLES; i++){
 	paddle[i]->total_alpha = paddle_alpha[i];
+	paddle[i]->recalc_pos();
 	}
       ball_countdown = BALLS;
       for (int i = 0; i < BALLS; i++)
 	{
-	  ball[i]->pos.set (0.0f + (rand () % 100) / 1000.0,
-			    0.0f + (rand () % 100) / 1000.0, 1.0f);
+	  ball[i]->pos.set (0.0f + (rand () % 100) / 100.0, 0.0f +  (rand () % 100) / 100.0, (rand () % 100) / 100.0);
+//	  ball[i]->pos.set (0.0f , 0.0f , 1.0f);
 	  ball[i]->normal.set (sin ((rand () % 100) / 100.0 * 2.0 * PI),
 			       cos ((rand () % 100) / 100.0 * 2.0 * PI),
 			       0.0f);
+	  ball[i]->pos.normalize();
+	  ball[i]->normal.normalize();
 	  ball[i]->alive = 0;
 	  ball[i]->HTT = 4.0;
 	  pevent[i]->type = BALL_CREATE;
@@ -375,33 +395,46 @@ PongPaddle::move (double alpha)
       total_alpha += 2.0 * PI;
     }
 
-  s = sin (alpha);
-  c = cos (alpha);
+  s = sin (total_alpha);
+  c = cos (total_alpha);
   //printf("s = %f, c = %f\n", s,c);      
   t = 1.0f - c;
-  x = pos[0] * (t * normal[0] * normal[0] + c) +
-    pos[1] * (t * normal[0] * normal[1] - s * normal[2]) +
-    pos[2] * (t * normal[0] * normal[2] + s * normal[1]);
-  y = pos[0] * (t * normal[0] * normal[2] + s * normal[2]) +
-    pos[1] * (t * normal[1] * normal[1] + c) +
-    pos[2] * (t * normal[1] * normal[2] - s * normal[0]);
-  z = pos[0] * (t * normal[0] * normal[2] - s * normal[1]) +
-    pos[1] * (t * normal[1] * normal[2] + s * normal[0]) +
-    pos[2] * (t * normal[2] * normal[2] + c);
+  x = s;
+  y = c;
+  z = 0.0f;
   pos.set (x, y, z);
   //printf("x = %f, y = %f, z = %f\n",pos[0], pos[1], pos[2]); 
+}
+
+inline void
+PongPaddle::recalc_pos ()
+{
+  double x, y, z;
+  double s, c, t;
+  s = sin (total_alpha);
+  c = cos (total_alpha);
+  t = 1.0f - c;
+  x = s;
+  y = c;
+  z = 0.0f;
+  pos.set (x, y, z);
 }
 
 double
 get_bounce_time (PongBall * ball)
 {
-  /*
-     printf ("px: %f, py: %f, pz: %f, nx: %f, ny: %f, nz: %f/n",
+  
+     printf ("px: %f, py: %f, pz: %f, nx: %f, ny: %f, nz: %f\n",
      ball->pos[0],
      ball->pos[1],
      ball->pos[2], ball->normal[0], ball->normal[1], ball->normal[2]);
-   */ return ball->HTT * acos (ball->normal[1] * ball->pos[0] -
-			       ball->normal[0] * ball->pos[1]) / PI;
+
+ //return ball->HTT * acos (ball->normal[1] * ball->pos[0] - ball->normal[0] * ball->pos[1]) / PI;
+float pn = ball->normal.dot(ball->pos);
+ Vec3f p_dis(ball->pos[0], ball->pos[1],ball->pos[2]);
+ p_dis -= (ball->normal * pn); 
+ p_dis.normalize();
+ return ball->HTT * arccos (ball->normal[1] * p_dis[0] - ball->normal[0] * p_dis[1]) / PI;
 }
 
 void
@@ -436,7 +469,8 @@ handle_events (double time)
 	}
       if (first < BALLS)
 	{
-	  printf ("Time: %f\n", first_time);
+	  //printf ("Time: %f\n", first_time);
+          if(ball[first]->alive) ball[first]->move ((time - ball[first]->moved) / ball[first]->HTT * PI);  //recalc latest position
 	  switch (pevent[first]->type)
 	    {
 	    case BALL_CREATE:
@@ -447,7 +481,7 @@ handle_events (double time)
 	    case BALL_BOUNCE:
 	      //printf ("\tBounce ball\n");
 	      {
-		bool does_rebound = false;
+		bool does_rebound = true; //false;
 		for (int i = 0; i < PADDLES; i++)
 		  {
 		    Vec3f v = paddle[i]->pos - ball[first]->pos;
@@ -470,10 +504,10 @@ handle_events (double time)
 		  }
 		if (does_rebound)
 		  {
-		    ball[first]->normal[0] = -(ball[first]->normal[0])	+0.5f * (0.5-((rand()%100) * 0.01));
-		    ball[first]->normal[1] = -(ball[first]->normal[1])	+0.5f * (0.5-((rand()%100) * 0.01));
+		    ball[first]->normal[0] = -(ball[first]->normal[0])	+0.2f * (0.5-((rand()%100) * 0.01));
+		    ball[first]->normal[1] = -(ball[first]->normal[1])	+0.2f * (0.5-((rand()%100) * 0.01));
 		    ball[first]->normal[2] = 0.0f;	//3*(0.5-((rand()%100) * 0.01));
-		    ball[first]->pos.normalize ();
+		    //ball[first]->pos.normalize ();
 		    ball[first]->normal.normalize ();
 		    ball[first]->moved = first_time;
 		    if (ball[first]->HTT > .5f)
@@ -516,6 +550,11 @@ handle_events (double time)
 	      break;
 	    }
 	  get_next_event (pevent[first], ball[first], first_time);
+	  if (pevent[first]->time < time + 0.01f) {
+	 	printf("BALL %d BOUNCE TIME= 0!!!!!!!!!\n",first);
+//		ball[first]->alive=false;
+		}
+	
 	}
     }
   while (first != BALLS);
@@ -641,7 +680,7 @@ EPongStelModule::draw (StelCore * core)
 		  QString text = "";
 		  text.setNum (pevent[i]->time - currentTime);
 
-		  painter.drawText (xy[0], xy[1],text);       //qDebug() << "end of drawing epong";
+//		  painter.drawText (xy[0], xy[1],text);       //qDebug() << "end of drawing epong";
 
 		}
 	      ball[i]->pos.normalize ();
