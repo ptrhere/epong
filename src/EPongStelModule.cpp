@@ -303,6 +303,16 @@ void
 reinit ()
 {
   in_game = false;
+			    {
+			      char buffer[OUTPUT_BUFFER_SIZE];
+			      osc::OutboundPacketStream p (buffer,
+							   OUTPUT_BUFFER_SIZE);
+			      p << osc::BeginBundleImmediate << osc::
+				BeginMessage ("/end") << osc::
+				EndMessage << osc::EndBundle;
+			      //should protect this with mutex...
+			      transmitSocket->Send (p.Data (), p.Size ());
+			  }
 start_game();  //testing
 }
 
@@ -332,7 +342,6 @@ start_game ()
 								   100) *
 	    0.01;
 
-      ball_countdown++; 
 	  //printf ("HTT: %f,  i:%d\n", HTT, i);
 	  //printf ("Ball creation of Ball %i at %f\n", i, pevent[i]->time);
 	}
@@ -444,7 +453,7 @@ void
 get_next_event (PongEvent * event, PongBall * ball, double now)
 {
   double delta = get_bounce_time (ball);
-	printf("delta: %d\n",delta);
+	printf("delta: %0.4f\n",delta);
   while (delta<0.0) 
 {
 	printf("negative bounce time randomising  randomising normal\n");
@@ -487,6 +496,7 @@ handle_events (double time)
 	  switch (pevent[first]->type)
 	    {
 	    case BALL_CREATE:
+      		ball_countdown++; 
 	      printf ("\tCreate ball\n");
 	      ball[first]->alive = 1;
 	      ball[first]->moved = first_time;
@@ -546,19 +556,6 @@ handle_events (double time)
 			  transmitSocket->Send (p.Data (), p.Size ());
 			}
 			ball_countdown--;
-			if (ball_countdown <= 0)
-			  {
-			    reinit ();
-			    {
-			      char buffer[OUTPUT_BUFFER_SIZE];
-			      osc::OutboundPacketStream p (buffer,
-							   OUTPUT_BUFFER_SIZE);
-			      p << osc::BeginBundleImmediate << osc::
-				BeginMessage ("/end") << osc::
-				EndMessage << osc::EndBundle;
-			      //should protect this with mutex...
-			      transmitSocket->Send (p.Data (), p.Size ());
-			  }}
 		      }
 		  }
 	      }
@@ -595,6 +592,10 @@ EPongStelModule::draw (StelCore * core)
     }
   else
     {
+			if (ball_countdown <= 1)
+			  {
+			    reinit ();
+			}
       double currentTime = StelApp::getTotalRunTime ();
       Vec3f xy;
       StelProjectorP prj = core->getProjection (StelCore::FrameAltAz);
